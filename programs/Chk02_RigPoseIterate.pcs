@@ -1,0 +1,65 @@
+'-----------------------------------------------------------------------------
+' Chk02: Camera rig pose - fast iteration
+'
+' CamSetCalibrationRigPose pushes the rig pose to Cambrian and updates the 3D
+' model in the UI WITHOUT launching a calibration sweep. This is the DENSO
+' equivalent of the "Set Rig Pose" button in the UR URCap.
+'
+' Use it to get the rig pose right in seconds instead of re-running a 5-10
+' minute CamAutoCalibration for every guess.
+'
+' THE TEST
+'   The GREEN axis of the triad drawn in the Cambrian UI must point the same
+'   way as "up" on the real cameras. Compare against the physical rig, not
+'   against what you expect the numbers to mean.
+'
+' TOLERANCE
+'   Translation ~30 mm, rotation ~10 deg. It does not need to be exact - it
+'   only has to be close enough for the solver to converge.
+'
+' WHY IT MATTERS
+'   A rig pose flipped 180 deg about Z will NOT calibrate. The optimisation
+'   cannot recover from an axial flip in the initial estimate; the run either
+'   diverges or finishes with a bad Final Score.
+'
+' THE LOOP
+'   Run -> look at the triad in the UI -> change Rz below -> run again.
+'   Try 0, 90, 180, 270. Then confirm Tx/Ty/Tz against a real measurement.
+'
+' NOTE ON SIGNS
+'   The UR example in Cambrian's docs pairs Y = +50 with Rz = 180, while the
+'   DENSO example pairs Y = -50 with Rz = 180. There is no universal rule.
+'   Measure the offset from the flange centre to the centre of the camera rig
+'   on YOUR mount rather than copying either convention.
+'-----------------------------------------------------------------------------
+
+#Include "Cambrian_API.pcs"
+
+Sub Main
+    TakeArm Keep = 1
+
+'   Rig centre relative to the flange, in MILLIMETRES.
+'   Measure these - do not assume the standard-mount defaults apply.
+    Dim Tx As Single = 0
+    Dim Ty As Single = -50
+    Dim Tz As Single = 70
+
+'   Rotation in DEGREES. Change Rz between runs; leave Rx/Ry at 0 unless the
+'   rig is genuinely tilted about X or Y.
+    Dim Rx As Single = 0
+    Dim Ry As Single = 0
+    Dim Rz As Single = 180
+
+'   Rig geometry. These are the standard-rig values. Small, wide and custom
+'   rigs need different numbers - ask Cambrian support for yours.
+    Dim FocalLength As Single = 8       ' mm
+    Dim StereoSeparation As Single = 0.08  ' METRES, not mm
+    Dim Tilt As Single = 5              ' degrees
+
+    CamInit 8
+    CamPing
+
+    CamSetCalibrationRigPose Tx, Ty, Tz, Rx, Ry, Rz, FocalLength, StereoSeparation, Tilt
+
+    PrintMsg "Rig pose pushed. Compare the triad's GREEN axis to camera 'up'."
+End Sub

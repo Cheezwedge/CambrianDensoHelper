@@ -1,0 +1,70 @@
+'-----------------------------------------------------------------------------
+' Chk03: Do the controller and Cambrian agree about the TCP?
+'
+' Cambrian has no TCP of its own. The robot sends its active tool offset with
+' every command and Cambrian overwrites whatever is in its Robot panel. So
+' "matching" means two things, and BOTH have to hold:
+'   1. The tool definition on the RC8 describes the real gripper, rotation
+'      included.
+'   2. That tool is the ACTIVE one when the Cambrian calls run. Defining a
+'      tool does not select it - hence the ChangeTool below.
+'
+' READING THE OUTPUT
+'
+'   controller tool   ToolPos( CurTool ) - the definition itself, six values.
+'                     This is the ground truth for what the RC8 believes.
+'
+'   TOOL0             Should be all zeros. If someone has redefined it,
+'                     everything downstream shifts silently.
+'
+'   srv flange        Cambrian's FK with no tool applied.
+'   srv TCP           Cambrian's FK with its tool applied.
+'
+'   The DIFFERENCE between the last two IS Cambrian's tool offset. Derive it
+'   and compare against the controller tool:
+'
+'     - If the two orientations are identical, Cambrian's tool rotation is 0.
+'     - Project the position delta onto the flange axes to recover the
+'       translation. (When the flange points straight down, RX ~ 180, the
+'       flange axes are X=(1,0,0), Y=(0,-1,0), Z=(0,0,-1).)
+'
+' WHY NOT JUST COMPARE RZ
+'   Euler components do not add independently. A 180 deg tool rotation about Z
+'   can land in RX or RY instead of RZ depending on the flange orientation, so
+'   an RZ-only comparison proves nothing. Compare all six, or better, run this
+'   with the tool 30-45 deg off vertical where the decomposition is stable.
+'-----------------------------------------------------------------------------
+
+#Include "Cambrian_API.pcs"
+
+Sub Main
+    Dim JT As Joint
+
+    TakeArm Keep = 1
+
+'   Base coordinates, not a work frame. CurPos is expressed in the active work
+'   coordinate system; Cambrian returns robot base coordinates.
+    ChangeWork 0
+
+'   Select the gripper tool. Change the number if yours is not TOOL1.
+    ChangeTool 1
+
+    CamInit 8
+    CamPing                      ' sends the active tool to Cambrian
+
+    JT = CurJnt                  ' one pose - do NOT move the robot below here
+
+    PrintMsg "TOOL active = " & Str( CurTool )
+
+    PrintMsg "-- controller tool --"
+    PrintDbg ToolPos( CurTool )
+
+    PrintMsg "-- TOOL0 (expect all zeros) --"
+    PrintDbg ToolPos( 0 )
+
+    PrintMsg "-- srv flange --"
+    PrintDbg CamGetFlangeFK( JT )
+
+    PrintMsg "-- srv TCP --"
+    PrintDbg CamGetFK( JT, 1 )
+End Sub

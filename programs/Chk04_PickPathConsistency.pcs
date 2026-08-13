@@ -1,0 +1,77 @@
+'-----------------------------------------------------------------------------
+' Chk04: Is CamGetPickPath internally consistent?
+'
+' This is the program that isolates the J6 wrist wind. It compares the two
+' targets the Cambrian executor actually drives to, WITHOUT moving the robot.
+'
+' CamExecutePathEx        final leg ->  Move L, CamGraspPose
+' CamExecutePathReverse   first step -> Move L, J2P( CamPathJoints( N ) )
+'
+' Those two expressions should describe the SAME physical pose. If they do,
+' neither linear leg moves the wrist. If they differ, the robot winds into the
+' grasp and unwinds on the retract - and the difference printed below is
+' exactly that wind, quantified before anything moves.
+'
+' RUNNING IT
+'   Jog to a pose where the camera can see a part, then run. If it prints
+'   "no path", the model saw nothing pickable - reposition and retry.
+'
+' READING IT
+'   forward target vs reverse target
+'     Same position and orientation      -> consistent, look elsewhere
+'     Same Z axis, X and Y negated       -> 180 deg about the tool axis
+'     Position differs by 2*(tool X, Y)  -> the wrist swung the offset TCP
+'                                           to the other side
+'
+'   CamGraspJoints vs CamPathJoints(last)
+'     Should be identical. If not, that is a separate finding.
+'
+'   FIG on the forward target is normally -1 (unspecified). That is documented
+'   behaviour, not a fault - a Move L takes its figure from the configuration
+'   the robot is already in. But note that DENSO's Fig encodes only J1, J3 and
+'   J5 branches, so it cannot constrain J6 at all.
+'
+' KNOWN CAUSE TO CHECK FIRST
+'   Grasp point Symmetry set to Cylindrical or Gamma generates rotation
+'   variants. If the configured rotation axis is parallel to the gripper
+'   approach axis, those variants become pure wrist spins. Set Symmetry to
+'   None, RELOAD THE MODEL (variants are built at load time), and re-run.
+'-----------------------------------------------------------------------------
+
+#Include "Cambrian_API.pcs"
+
+Dim ModelName As String = "12x130_Kii_BLN_10Aug2026_161309_10-08-2026"
+Dim ApproachDist As Single = 0.010   ' METRES - 10 mm
+
+Sub Main
+    Dim LastN As Integer
+
+    TakeArm Keep = 1
+    ChangeWork 0
+    ChangeTool 1
+
+    CamInit 8
+    CamPing
+    CamLoadModel ModelName
+
+    If CamGetPickPath( ModelName, "", "", CamOptNum, ApproachDist ) = 0 Then
+        PrintMsg "no path - reposition so the camera sees a pickable part"
+        Exit Sub
+    End If
+
+    LastN = CamPathCount - 1
+
+    PrintMsg "MoveType(last) = " & Str( CamPathMoveType( LastN ) )
+
+    PrintMsg "-- forward target (CamGraspPose) --"
+    PrintDbg CamGraspPose
+
+    PrintMsg "-- reverse target J2P(CamPathJoints(last)) --"
+    PrintDbg J2P( CamPathJoints( LastN ) )
+
+    PrintMsg "-- CamGraspJoints --"
+    PrintDbg CamGraspJoints
+
+    PrintMsg "-- CamPathJoints(last) --"
+    PrintDbg CamPathJoints( LastN )
+End Sub

@@ -1,0 +1,83 @@
+'-----------------------------------------------------------------------------
+' Cal01: Automatic hand-eye calibration
+'
+' Cambrian's Example 02 with the three setup steps that are easy to miss.
+'
+' BEFORE RUNNING
+'   1. Rig pose verified with Chk02 - the triad's GREEN axis lines up with
+'      "up" on the real cameras. A 180 deg axial flip in the initial estimate
+'      will NOT converge.
+'   2. REMOVE THE GRIPPER. At the calibration pose it clips the edge of the
+'      field of view and partially occludes the board. The images still look
+'      fine, so this is easy to miss and it wrecks the result.
+'   3. Calibration board placed tangential to the robot base, no obstacles,
+'      fully visible in both cameras from the start pose.
+'   4. Cameras exposed so the board is clearly visible - manual exposure is
+'      often more stable than auto for calibration capture.
+'   5. Cable slack for full J6 rotation. The sweep rotates the wrist hard.
+'
+' WHAT THE TWO EXTRA LINES DO
+'   CamSetCalibrationMount "FLANGE"
+'     Sets robot-mounted explicitly rather than trusting the Cameras panel.
+'     If the mount type is wrong the calibration result is wrong.
+'
+'   CamNewCalibration
+'     Discards the existing rig calibration. This matters more than it looks:
+'     Cambrian locks the PREVIOUS calibration's principal point as a reference
+'     on every recalibration. If your first run was done with a bad rig pose,
+'     every run since has been anchored to that bad data.
+'
+' AFTER IT FINISHES - acceptance numbers
+'
+'   Number of images    minimum 8      good 15+
+'   Position STD        maximum 10 mm  good < 1 mm
+'   Average pixel error maximum 10 px  good < 5 px
+'
+'   Then open the overlap diagnostic and zoom in:
+'     ~/Desktop/Caint/Calibration/calib_X/results/unity/final_overlap.png
+'     red dots        excellent
+'     short red lines acceptable
+'     long red lines  bad - recalibrate
+'
+'   If the numbers fail, do not proceed. Everything downstream depends on this.
+'-----------------------------------------------------------------------------
+
+#Include "Cambrian_API.pcs"
+
+Sub Main
+    TakeArm Keep = 1
+
+    Dim CalibrationPose As Joint
+
+'   Rig centre relative to the flange (mm) - carry over the values confirmed
+'   with Chk02_RigPoseIterate.pcs
+    Dim Tx As Single = 0
+    Dim Ty As Single = -50
+    Dim Tz As Single = 70
+    Dim Rx As Single = 0
+    Dim Ry As Single = 0
+    Dim Rz As Single = 180
+
+'   Standard rig geometry - change for small, wide or custom rigs
+    Dim FocalLength As Single = 8          ' mm
+    Dim StereoSeparation As Single = 0.08  ' METRES
+    Dim Tilt As Single = 5                 ' degrees
+
+    MOTOR ON
+
+'   Teach J1 on the pendant: jog until the cameras frame the board, then save
+'   the current pose into J1.
+    CalibrationPose = J1
+
+'   @0 and no Next, so the move blocks and the robot is fully stopped before
+'   the solve begins.
+    MOVE P, @0 CalibrationPose, SPEED=(100,100,100)
+
+    CamInit 8
+    CamPing
+
+    CamSetCalibrationMount "FLANGE"
+    CamNewCalibration
+
+    CamAutoCalibration Tx, Ty, Tz, Rx, Ry, Rz, FocalLength, StereoSeparation, Tilt
+End Sub

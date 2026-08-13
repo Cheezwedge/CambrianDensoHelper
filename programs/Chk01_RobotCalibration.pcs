@@ -1,0 +1,40 @@
+'-----------------------------------------------------------------------------
+' Chk01: Robot kinematic calibration status
+'
+' Reports whether the Cambrian server holds a kinematic calibration for this
+' robot. This is SEPARATE from the camera hand-eye (.rig) calibration - it is
+' the calibration of the server's robot model against the real machine.
+'
+' Without it, the server uses the nominal DENSO model, which is typically
+' several mm off the real kinematics. Every IK-dependent command is affected:
+'   CamGetIK, CamGetPickSequence, CamGetPickPath,
+'   CamGetPathToPose, CamGetPathToJoints, CamGetPlannedPath
+'
+' Note that Ex13-style programs (CamGetPrediction + Move L) do NOT use server
+' IK at all, so they can look perfectly healthy while this is missing.
+'
+' If this prints 0:
+'   1. Run Ex14_ROBOT_CALIBRATION_IK.pcs to collect samples.
+'      It does NOT move the robot - flange poses are computed locally via J2P.
+'   2. Run Ex15_TEST_CALIBRATION.pcs to measure the FK error before/after.
+'   3. Re-run this program and confirm it prints 1.
+'-----------------------------------------------------------------------------
+
+#Include "Cambrian_API.pcs"
+
+Sub Main
+    Dim IsCal As Integer
+
+    CamInit 8
+    CamPing
+
+    IsCal = CamCheckRobotCalibration()
+
+    PrintMsg "Robot kinematic calibration = " & LTrim( Str( IsCal ) )
+
+    If IsCal = 0 Then
+        PrintMsg "NOT calibrated - server is using the nominal robot model."
+    Else
+        PrintMsg "Calibrated."
+    End If
+End Sub
