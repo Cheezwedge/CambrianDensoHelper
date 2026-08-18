@@ -63,3 +63,19 @@ quantity. To read a genuine flange pose, switch to `TOOL0` first, or use
 **Do not edit `Cambrian_API.pcs`.** `CamExecutePath`, `CamExecutePathEx`,
 `CamExecutePathReverse` and friends are vendor library code. Local edits are lost on the
 next API update, and support will ask you to reproduce on stock.
+
+## Reference
+
+`reference/DensoRC8_manual.md` is the DENSO RC8 VS-series manual (VS-050/060/068/087),
+converted to Markdown. It is vendor documentation kept here for lookup convenience —
+DENSO WAVE's copyright, not ours. Do not redistribute it outside this repository.
+
+`reference/COMMAND_INDEX.md` maps 565 PacScript commands and functions to line numbers
+in that file. To read one:
+
+```bash
+sed -n '15663,15722p' reference/DensoRC8_manual.md     # J2P
+```
+
+`docs/denso-pacscript-notes.md` is the distilled version — the calls this project
+actually uses, organised by how well each one is confirmed.
