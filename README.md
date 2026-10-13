@@ -31,6 +31,11 @@ If you are chasing the J6 wrist rotation specifically, read
 [`docs/findings.md`](docs/findings.md) - it records what has already been ruled out and
 how, so you don't repeat the work.
 
+If you are new to this cell entirely, read [`CLAUDE.md`](CLAUDE.md) first. It covers the
+architecture decisions and why they were made, the conventions, the gotchas, and the
+approaches that were tried and failed - so you don't spend time re-deriving any of it.
+[`CHANGELOG.md`](CHANGELOG.md) is the dated history.
+
 ## Programs
 
 | Program | Answers |
